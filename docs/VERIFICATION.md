@@ -1,5 +1,53 @@
 # Verification log
 
+## Dynamic headers compatibility 1.2.4 — 7 November 2026
+
+- The user's exact `dynamic-config` symptom was not explained by the earlier stale-form fix. A read-only native probe compared authenticated HTTP and Tool snapshots: they matched, both editable. The Host/UI ownership hypothesis was therefore rejected.
+- Shape-only public ConfigEditor inspection then established the actual Context7 condition: raw `headers` is a whole-map `!!js` expression, effective `headers` is an empty map. The old update guard rejected every such expression even when the requested Authorization target had no overlap. Expression text and credential values were not requested or returned.
+- Reproduced before/after using real canonical Lazy Config schema, a Host + uiOnly composition, actual authenticated HTTP and native ConfigEditor on two isolated disabled synthetic servers. Before: normal first Save200, expression-backed second400 `dynamic-config`. After: both200 with bound refs in fresh runtime projection; raw expression preserved and effective headers remained empty. Fixture reset:true.
+- Minimal guard now preserves an exact raw expression only for an already-resolved known plain/null-prototype map with no overlapping target. HTTP target matching is case-insensitive; env matching is exact. Active overlap, unknown shape, malformed expression markers and stale raw revisions still reject; no resolved values are copied to disk.
+- Source/schema/HTTP/regression suite **138/138 passed**, build19 modules. Applied changed code through public native `hmr.runExclusive` + `reconcileProfile` for required entries: applied, pending0, warnings0, no process restart required. Linked package version1.2.4; existing entries and user bindings retained. Read-only production probe again matched HTTP/Tool and confirmed original Context7 expression shape remained untouched.
+- Both disposable diagnostics were uninstalled and their owned source removed after fixture reset. Test-only metadata/artwork omission applies only to these discarded fixtures. No real token or user binding was written, no external MCP request was issued, and the actual post-fix owner Save remains for the user to perform. Verify is read-only; it cannot itself create a binding.
+
+## Native second-save and verified-card correction 1.2.3 — 7 November 2026
+
+- User reported Context7 still unbound after Save, with no visible outcome. Found an actual stale-form condition: the old per-instance HMAC key changed every server revision after any config restart, including untouched rows. Separately, save errors were page-top/offscreen and success trusted any valid GET instead of comparing persisted mappings.
+- Reproduced through the running DSH's real authenticated HTTP carrier and native ConfigEditor using an isolated two-disabled-server fixture, synthetic reference names and no MCP client: first save200; second save using its original unchanged-row revision400 `config-changed`; fresh revision200. Both raw Loader config and fresh runtime projections were checked. This proves a failing lifecycle condition, not the exact unrecorded HTTP response of the user's earlier click.
+- New module-private root-scoped WeakMap key with entry-ID/module-name HMAC domains keeps unchanged-row revisions stable across ordinary config restarts. Canonical raw serialization ignores object key ordering but preserves expressions/array order and rejects actual changed rows; roots/entries remain isolated. No key is exported or persisted.
+- Re-ran the same native fixture against the new controller: original second-row revision now200; both rows bound in raw Loader config and active fresh projection. Fixture reset returned true, its bundle was uninstalled and owned source removed. No real token or user binding was written; discarded test-only fixture intentionally had no artwork/display metadata.
+- Client now keeps pending/verifying/errors/success beside each submitting card. Success requires matching server, transport, destination, enabled flag, complete header/env mappings/prefixes and no target-pin mismatch. Failed saves preserve drafts. Explicit Verify/refresh is GET-only, does not replay POST, and resets confirmation when restoring a draft against a fresh snapshot.
+- Fresh canonical Host/API/state entry modules prevent retaining old controller code in the running module cache; compatibility entry exports remain. Build19 modules, **131/131 tests passed**, including native-carrier fixtures, revision isolation, false-success refusal and sequential Firecrawl/Context7 UI logic.
+- Local1.2.3 installed through Plugin Manager: `application: applied`, warnings[]. Live settings slot active. User Firecrawl binding retained; actual Context7 intentionally remains unbound until the owner saves in the refreshed UI. No real key-bearing MCP call or post-fix visual/browser submission was performed.
+
+## Save feedback 1.2.2 — 7 November 2026
+
+- Moved the generic page-top success text into a prominent theme-token success panel beside the matching server's Save bindings button. Includes a checkmark and server name, with one polite atomic status announcement; no token values are shown.
+- Success still requires the matching POST acknowledgement and a successful GET reload. Page-owned state survives form remounts, edits of other servers do not dismiss it, and editing the saved server clears stale feedback.
+- Build and **120/120 tests passed**, including location/localization/remount/error regressions. Updated the existing linked bundle and restarted it through Plugin Manager; `application: applied`, warnings[]. Live `lazy-mcp-auth` slot active; pre-existing server bindings preserved.
+- Visual light/dark rendering and actual user-only browser save were not exercised; no browser control available. Refresh the connected page to load the new Client generation. Original display resources unchanged.
+
+## HTTP transport correction 1.2.1 — 7 November 2026
+
+- User-reported generic backend error traced to the plugin route contract: the 1.2.0 combined GET/POST route selected `requestBody: streaming`. The installed Connection bridge constructs streaming Requests with a body, which is invalid for GET/HEAD and fails before the plugin handler. Earlier handler-only unit tests and unauthenticated401 checks did not exercise this path.
+- Split buffered GET `/api/lazy-discovery/auth` from bounded streaming POST `/api/lazy-discovery/auth/save`; native Connection rejects duplicate exact paths even when methods differ. Preserved32KiB streaming validation rather than buffering save bodies up to the carrier's larger default cap.
+- Client now uses the new POST path and safely distinguishes access/route/non-JSON HTTP/timeout/network errors. It does not reflect raw error bodies or automatically retry a grant.
+- Build validated16 source modules; **119/119 tests passed**. Added actual node:http carrier tests matching installed body construction, including an old-mode negative control, authenticated fixture GET, malformed/chunked oversized POST, confirmation checks and route teardown. These fixture tests are distinct from native runtime evidence.
+- Installed local1.2.1 via Plugin Manager: `application: applied`, warnings[]. Actual authenticated HTTP check against the running DSH returned GET200 JSON with a valid2-server snapshot; POST `{}` to `/save` returned400 `invalid-request` without any grant; old POST path returned404. Served Client artifact returned200 and contains `/api/lazy-discovery/auth/save` (rev `ff0b138acc2b` at verification time).
+- Native admission was obtained through the public Host Connection API inside a disposable, fixed-target, metadata-free diagnostic fixture. Authentication material remained only in Host memory; no cookie, launch URL, key or raw response body was emitted. Fixture was uninstalled and its owned source directory removed. Metadata/icon omission applies only to this discarded test fixture, not the delivered plugin.
+- Existing user bindings remained unchanged. Actual successful browser form submission and real key-bearing MCP calls were not executed. Refresh the page to load the corrected Client artifact before retrying a save.
+
+## Local credential integration 1.2.0 — 7 November 2026
+
+- Installed local `@pnpwin/dsh-lazy-discovery` 1.2.0 and compatible `@pnpwin/dsh-token-vault` 1.0.2 through Plugin Manager. Both returned `application: applied`, warnings[]. No profile manifest/patch was hand-edited; no GitHub release was published.
+- Final Lazy build validated 15 source modules and distribution resources; **111/111 tests passed**. Separate Vault syntax checks and **14/14 tests passed**.
+- New coverage includes names-only settings projections; preserving raw config expressions with stale-revision/destination-pin checks; user-only grants; optional Vault suggestions/manual references; missing provider/value isolation; HTTP/stdio SDK fixtures; memory-only ref catalogs; provider loss/rotation and late connection/discovery responses; all-Agent registration removal; no business replay; credential-reflection refusal.
+- Live `lazy_mcp_auth_status` returned the original two server names, both editable, with no automatically assigned references. The core credentials provider is available. Only names/configured state are projected; values were not requested.
+- Live `discovery_status` immediately after install showed zero connections, discoveries and business calls for both servers, proving installation did not eagerly connect.
+- Live Client Inspect confirmed additive settings slot `lazy-mcp-auth`, order 36, active beside the existing Vault settings section. Rendered light/dark appearance and actual browser form submission remain unverified; hook tests do not substitute for visual verification.
+- The authenticated authorization endpoint rejected an unauthenticated request with401 and a foreign Origin with403. Owner writes are not exposed as model tools.
+- The existing original icon was opened; new root and Host locale resources remain packaged. User credentials, real authenticated MCP calls and per-server grants were not used for testing or modified automatically.
+- Historical prompt-token/context comparisons below remain 1.1.0 observations. New 1.2.0 provider prompt-token measurements were not run.
+
 ## GitHub release 1.1.0
 
 - Runtime, CLI, build and benchmark helpers now live under `src/`; `test/` and `locale/` remain in place.

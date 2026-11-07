@@ -1,1 +1,1 @@
-{"meta":{"title":"Lazy capability discovery","description":"Load selected native MCP tools on demand and search a private cached skill catalog without sending all descriptions to the model."}}
+{"meta":{"title":"Lazy MCP and skills","description":"Settings for MCP credential bindings, lazy native tool loading and scope-aware skill discovery. Token Vault is optional."}}

@@ -15,8 +15,9 @@ async function sourceFiles(directory) {
   }
   return files;
 }
+const rootFiles = new Set(['.git', '.gitignore', '.gitattributes', '.npmignore', '.npmrc', 'AGENTS.md', 'LICENSE', 'README.md', 'README.ru.md', 'UPSTREAM.md', 'CHANGELOG.md', 'package.json', 'pnpm-lock.yaml', 'cordis.patch.yml', 'icon.png']);
 for (const entry of await readdir(root, { withFileTypes: true })) {
-  if (entry.isFile() && /\.(?:mjs|cjs|js|ts|tsx|jsx)$/.test(entry.name)) throw new Error(`Root implementation file is forbidden: ${entry.name}`);
+  if (entry.isFile() && !rootFiles.has(entry.name)) throw new Error(`Unexpected root file; implementation belongs in src/: ${entry.name}`);
 }
 for (const file of pkg.files) await stat(path.join(root, file));
 for (const key of ['.', './host']) {

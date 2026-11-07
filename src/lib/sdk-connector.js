@@ -1,8 +1,10 @@
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { CredentialBindingError, usesCredentials, validateBindings } from './credential-bindings.js';
 
 export function validateServerConfig(config) {
   if (!config || !/^[A-Za-z0-9_-]{1,32}$/.test(config.serverName)) throw new Error('Invalid MCP serverName');
+  validateBindings(config, { checkTarget: false });
   if (config.transport === 'streamable-http') {
     const url = new URL(config.url);
     if (url.username || url.password || !['https:', 'http:'].includes(url.protocol)) throw new Error('Invalid MCP endpoint');
@@ -18,7 +20,10 @@ export function defaultScrubbedEnv() {
 }
 export function createSdkConnector({ scrubbedParentEnv = defaultScrubbedEnv } = {}) {
   return async (rawConfig, { onListChanged = () => {}, onClose = () => {}, signal } = {}) => {
+    signal?.throwIfAborted();
     const config = validateServerConfig(rawConfig);
+    if (config.enabled === false) throw new CredentialBindingError('SERVER_DISABLED', 'MCP server is disabled');
+    if (usesCredentials(config)) throw new CredentialBindingError('CREDENTIALS_UNAVAILABLE', 'MCP credential bindings must be resolved before connection');
     const timeout = config.toolCallTimeoutMs ?? 120000;
     const client = new Client({ name: 'dsh-lazy-discovery', version: '1.0.0' }, {
       capabilities: {}, versionNegotiation: { mode: 'auto' },
@@ -27,10 +32,27 @@ export function createSdkConnector({ scrubbedParentEnv = defaultScrubbedEnv } = 
     });
     let closed = false;
     client.onclose = () => { closed = true; onClose(); };
+    const headers = new Headers(config.headers ?? {});
+    const bearer = /^Bearer (.+)$/i.exec(headers.get('authorization') ?? '');
+    if (bearer) headers.delete('authorization');
+    // A minimal SDK TokenProvider never authenticates/retries on 401. The token is
+    // pinned to this generation, not refreshed into an existing principal's session.
     const transport = config.transport === 'streamable-http'
-      ? new StreamableHTTPClientTransport(new URL(config.url), { requestInit: { headers: config.headers ?? {}, redirect: 'error' } })
+      ? new StreamableHTTPClientTransport(new URL(config.url), {
+          requestInit: { headers, redirect: 'error' }, onInsufficientScope: 'throw',
+          ...(bearer ? { authProvider: { token: async () => { signal?.throwIfAborted(); return bearer[1]; } } } : {}),
+          fetch: (url, init) => {
+            signal?.throwIfAborted();
+            return fetch(url, { ...init, redirect: 'error',
+              signal: AbortSignal.any([...(signal ? [signal] : []), ...(init?.signal ? [init.signal] : [])]) });
+          },
+        })
       : new StdioClientTransport({ command: config.command, args: config.args ?? [],
           cwd: config.cwd || undefined, env: { ...scrubbedParentEnv(), ...(config.env ?? {}) }, stderr: 'pipe' });
+    let stopping;
+    const stop = () => stopping ??= client.close().catch(() => transport.close());
+    const abort = () => { void stop().catch(() => {}); };
+    signal?.addEventListener('abort', abort, { once: true });
     // Drain rather than retain stderr: no credential-bearing server logs enter the model or an unbounded buffer.
     if (config.transport === 'stdio') transport.stderr?.resume();
     try {
@@ -38,18 +60,25 @@ export function createSdkConnector({ scrubbedParentEnv = defaultScrubbedEnv } = 
         signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(Math.min(timeout, 30000))]) });
       if (closed) throw new Error('MCP transport closed while connecting');
     }
-    catch (error) { await client.close().catch(() => transport.close().catch(() => {})); throw error; }
+    catch (error) { signal?.removeEventListener('abort', abort); await stop().catch(() => {}); throw error; }
+    const requestOptions = (options = {}) => {
+      signal?.throwIfAborted();
+      return { timeout, ...options, signal: AbortSignal.any([...(signal ? [signal] : []), ...(options.signal ? [options.signal] : [])]) };
+    };
     return {
-      get instructions() { return client.getInstructions() ?? ''; },
-      listTools: ({ signal: requestSignal } = {}) => client.getServerCapabilities()?.tools === undefined
-        ? Promise.resolve({ tools: [] }) : client.listTools(undefined, { cacheMode: 'refresh', timeout, signal: requestSignal }),
-      callTool: (name, args, options) => client.callTool({ name, arguments: args }, options),
-      close: () => client.close(),
+      get instructions() { signal?.throwIfAborted(); return client.getInstructions() ?? ''; },
+      listTools: (options = {}) => {
+        const request = requestOptions(options);
+        return client.getServerCapabilities()?.tools === undefined ? Promise.resolve({ tools: [] }) : client.listTools(undefined, { ...request, cacheMode: 'refresh' });
+      },
+      callTool: (name, args, options) => client.callTool({ name, arguments: args }, requestOptions(options)),
+      close: async () => { signal?.removeEventListener('abort', abort); await stop(); },
       // Resources remain behind the same lazy connection and timeout policy.
       resource: (method, params, options) => {
-        if (method === 'resources/list') return client.getServerCapabilities()?.resources ? client.listResources(params, options) : { resources: [] };
-        if (method === 'resources/templates/list') return client.getServerCapabilities()?.resources ? client.listResourceTemplates(params, options) : { resourceTemplates: [] };
-        if (method === 'resources/read') return client.readResource(params, options);
+        const request = requestOptions(options);
+        if (method === 'resources/list') return client.getServerCapabilities()?.resources ? client.listResources(params, request) : { resources: [] };
+        if (method === 'resources/templates/list') return client.getServerCapabilities()?.resources ? client.listResourceTemplates(params, request) : { resourceTemplates: [] };
+        if (method === 'resources/read') return client.readResource(params, request);
         throw new Error('Unknown MCP resource operation');
       }
     };

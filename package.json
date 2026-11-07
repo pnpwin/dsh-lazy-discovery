@@ -1,6 +1,6 @@
 {
   "name": "@pnpwin/dsh-lazy-discovery",
-  "version": "1.1.0",
+  "version": "1.2.4",
   "private": true,
   "type": "module",
   "description": "Lazy native MCP tools and scope-aware cached skill discovery for DeepSeek Harness.",
@@ -12,11 +12,12 @@
   "engines": { "node": ">=20.3.0", "dsh": "0.2.2-rc.1" },
   "packageManager": "pnpm@11.28.5",
   "exports": {
-    ".": "./src/index.js",
-    "./host": "./src/index.js",
+    ".": "./src/host.js",
+    "./host": "./src/host.js",
+    "./client": "./src/client.js",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.png",
-    "./host/locale/*.json": "./locale/*.json",
+    "./host/locale/*.json": "./locale/host/*.json",
     "./host/icon": "./icon.png"
   },
   "files": ["src", "test", "docs", "locale", "icon.png", "cordis.patch.yml", "README.md", "README.ru.md", "LICENSE", "UPSTREAM.md", "AGENTS.md"],
@@ -26,7 +27,7 @@
     "test": "node --test test/*.test.js",
     "benchmark:report": "node src/benchmark.mjs"
   },
-  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" }, "client": { "platform": "web", "immediately": true, "inject": ["@deepseek-ai/dsh-client-ui-settings", "@deepseek-ai/dsh-client-locale"] } },
   "dependencies": {
     "@modelcontextprotocol/client": "2.2.0",
     "@modelcontextprotocol/server": "2.2.0",

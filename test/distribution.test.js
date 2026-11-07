@@ -6,10 +6,12 @@ import { compareContext } from '../src/benchmark.mjs';
 const root = new URL('../', import.meta.url);
 test('distribution exports runtime code from src without relocating test or locale', async () => {
   const pkg = JSON.parse(await readFile(new URL('package.json', root), 'utf8'));
-  assert.equal(pkg.exports['.'], './src/index.js');
-  assert.equal(pkg.exports['./host'], './src/index.js');
-  for (const file of ['src/index.js', 'src/proxy.mjs', 'test/fixture-server.mjs', 'locale/en.json', 'locale/ru.json', 'README.md', 'README.ru.md', 'LICENSE', 'UPSTREAM.md']) assert.ok((await stat(new URL(file, root))).isFile());
-  assert.ok(!(await readdir(root)).some(name => /\.(?:mjs|cjs|js|ts|tsx|jsx)$/.test(name)));
+  assert.equal(pkg.exports['.'], './src/host.js');
+  assert.equal(pkg.exports['./host'], './src/host.js');
+  for (const file of ['src/index.js', 'src/host.js', 'src/lib/auth-api.js', 'src/lib/auth-state.js', 'src/proxy.mjs', 'test/fixture-server.mjs', 'locale/en.json', 'locale/ru.json', 'README.md', 'README.ru.md', 'LICENSE', 'UPSTREAM.md']) assert.ok((await stat(new URL(file, root))).isFile());
+  const rootFiles = new Set(['.git', '.gitignore', '.gitattributes', '.npmignore', '.npmrc', 'AGENTS.md', 'LICENSE', 'README.md', 'README.ru.md', 'UPSTREAM.md', 'CHANGELOG.md', 'package.json', 'pnpm-lock.yaml', 'cordis.patch.yml', 'icon.png']);
+  for (const entry of await readdir(root, { withFileTypes: true })) if (entry.isFile()) assert.ok(rootFiles.has(entry.name), `Unexpected root file: ${entry.name}`);
+  assert.ok(pkg.exports['./client'].startsWith('./src/'));
   assert.ok(!Object.keys(pkg.dependencies).some(name => name.startsWith('@deepseek-ai/')));
   assert.equal(pkg.scripts.prepare, undefined);
 });

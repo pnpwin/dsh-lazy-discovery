@@ -4,7 +4,7 @@
 
 [GitHub](https://github.com/pnpwin/dsh-lazy-discovery) · [English](<README.md>) · [Upstream и лицензии](<UPSTREAM.md>) · [Проверки](<docs/VERIFICATION.md>)
 
-Пакет: `@pnpwin/dsh-lazy-discovery` · версия: **1.1.0** · совместимый runtime: **DSH 0.2.2-rc.1**.
+Пакет: `@pnpwin/dsh-lazy-discovery` · версия: **1.2.4** · совместимый runtime: **DSH 0.2.2-rc.1**.
 
 Опциональный Host-плагин оставляет большие каталоги вне первоначального контекста модели. Штатный загрузчик `skill`, прямой вызов skill через `/name` и обычный Native executor DSH сохраняются. Лимит контекстного окна не увеличивается. Плагин не является security sandbox.
 
@@ -33,11 +33,13 @@ mcp_tools_load({ids: ["<точный ID из результата поиска>"
 
 ## Установка
 
-Попросите DSH установить GitHub bundle через Plugin Manager:
+Установите фиксированный GitHub-релиз через Plugin Manager:
 
 ```json
-{"action":"install_bundle","target":"github:pnpwin/dsh-lazy-discovery#v1.1.0"}
+{"action":"install_bundle","target":"github:pnpwin/dsh-lazy-discovery#v1.2.4"}
 ```
+
+При обновлении удалите прежний bundle через Plugin Manager перед установкой этого источника. Сохраняйте тот же профиль и patch ID, чтобы существующие настройки оставались адресуемыми; не редактируйте файлы профиля вручную. В старой версии `v1.1.0` интерфейса привязок ещё нет.
 
 Для воспроизводимости фиксируйте проверенный commit или release tag. Установка меняет активный профиль и может требовать подтверждения. Проверяйте `application`, `warnings` и `nextStep` в результате: наличие пакета ещё не доказывает успешную активацию. Не обходите проверку совместимости runtime.
 
@@ -50,6 +52,56 @@ Bundle намеренно не отключает чужую eager MCP-запи�
 Patch ID `local-lazy-discovery` сохранён для совместимости. При переходе с локального прототипа `@local/dsh-lazy-discovery` не держите обе версии включёнными: отключите/удалите прежний bundle в ходе миграции. Используйте Plugin Manager, а не ручные изменения manifest и patch профиля.
 
 Для проверки чистого начального контекста создайте **новую сессию**. В старой истории могут оставаться ранее переданные каталоги: плагин отменяет их актуальность компактным сообщением, но не стирает уже состоявшиеся запросы к провайдеру.
+
+## Именованные credentials для MCP
+
+Версия 1.2.4 добавляет независимые native credential references и пользовательские настройки авторизации каждого MCP-сервера. Результат сохранения виден рядом с выбранным сервером; успех подтверждается по перечитанным привязкам. При ошибке черновик сохраняется. Verify/refresh выполняет только GET и никогда автоматически не повторяет выдачу разрешения. После обновления перезагрузите страницу.
+
+Целые `!!js`-выражения headers/env сохраняются, если их resolved map не пересекается с новыми назначениями. Вычисленные значения не записываются в конфигурацию; пересечение или неизвестная форма блокируются. Релизный suite содержит **138 проходящих тестов**; проверки native HTTP/reload и их ограничения описаны в [Verification notes](<docs/VERIFICATION.md>).
+
+Откройте **Настройки → Авторизация MCP**. Для каждого настроенного сервера есть отдельная форма: включение/отключение, Bearer token или произвольные HTTP-заголовки, либо stdio environment mappings. Выберите имя credential и явно подтвердите передачу этому назначению. Поля для ввода секретного значения здесь нет. Адрес/исполняемый файл меняется в обычной конфигурации MCP, не на этой странице.
+
+С установленным Vault доступны подсказки из его аутентифицированного API имён. Без Vault имя вводится вручную. Штатный credentials provider DSH проверяет сохранённые значения, затем окружение запуска и dotenv. Изменение окружения обычно требует перезапуска DSH. Отключение Vault не удаляет native credentials и не отключает Lazy. Даже без credentials provider literal/keyless-серверы и skills работают; недоступны только серверы с назначенными refs.
+
+Пример **конфигурации сервера**, без секретного значения:
+
+```yaml
+serverName: firecrawl
+transport: streamable-http
+url: https://mcp.firecrawl.dev/v2/mcp
+headerRefs:
+  Authorization:
+    name: FIRECRAWL_API_KEY
+    prefix: 'Bearer '
+```
+
+Для Context7 используется аналогичная привязка к `CONTEXT7_API_KEY` и его endpoint. Пример локального доверенного процесса:
+
+```yaml
+serverName: local-service
+transport: stdio
+command: /absolute/path/to/trusted-mcp-server
+args: []
+envRefs:
+  SERVICE_API_KEY: SAVED_SERVICE_TOKEN
+```
+
+- Передаются только явно назначенные имена. Глобальный `process.env` не меняется. Зависимости от пакета Vault, его маркеров или UI нет.
+- `headerRefs` поддерживается для HTTP, `envRefs` — для stdio. Имена — POSIX до 128 символов, без `DSH_*` и имён прототипов; максимум 32 mappings на сервер. Prefix — **публичный несекретный** текст до 256 символов. Не вставляйте туда токен.
+- Замена пересекающихся literal `headers/env` требует отдельной галочки. Удаляются только совпадающие назначения; остальные raw settings и YAML expressions сохраняет штатный Config Editor.
+- UI сохраняет `credentialTarget`, привязанный к точному адресу или executable/args/cwd. После смены назначения привязка блокируется до повторного подтверждения. Ручные refs без этого pin поддерживаются как конфигурация владельца.
+- `enabled: false` отключает сервер. Удаление refs само по себе не удаляет прежнюю literal-конфигурацию. Удаление сохранённого значения **не отзывает токен у сервиса** и может открыть fallback из окружения/dotenv. Для запрета новых вызовов независимо от fallback отключите сервер.
+- Если обязательного значения нет, сервер недоступен: автоматического keyless downgrade и сохранённого старого токена нет.
+- Проверка credentials происходит перед операциями, в том числе cache-backed discovery/restore. Изменение ref инвалидирует только связанные server generations: старые операции отменяются, транспорт закрывается, регистрации и memory metadata снимаются. Переподключение остаётся ленивым; другие серверы и skills продолжают работать.
+- Для refs включён **только memory cache**, без чтения/записи дискового каталога. Новый auth generation сначала получает актуальный каталог; selection hints могут восстановить лишь совпадающие схемы. Кэш literal/keyless не изменён.
+- HTTP bearer использует SDK token provider, привязанные к generation запросы и `redirect: error`. Нет автоматического повтора business calls после 401/403, смены credentials или неопределённого результата. Для stdio заменяется процесс. Закрытие подключения не отменяет действие, уже принятое удалённым сервисом.
+- Прямые отражения известных секретов в discovery metadata или результатах отклоняются до публикации модели. Это не DLP для кодированных значений и не изоляция от получившего токен MCP/процессов того же OS-пользователя. Штатное local credentials-хранилище не становится зашифрованным.
+
+`lazy_mcp_auth_status({})` возвращает тот же список имён/статусов, что и страница, без открытия сети и без значений. Изменения привязок, выдающие полномочия, доступны только через owner UI, а не через agent tools. Аутентифицированный owner API имеет те же права; отдельной OS user-presence границы здесь нет.
+
+В bundle входят `/host` engine row и корневой `uiOnly` row для browser discovery. Headless discovery не требует страницы настроек или `connection` service. Необязательный API подсказок Vault — `GET /api/token-vault/list`; отсутствие или сбой не мешают ручному вводу.
+
+Приведённые ниже исторические измерения контекста относятся к 1.1.0, не к версии с новым UI/status tool. Их нельзя объявлять свежими измерениями 1.2.0.
 
 ## Конфигурация и устройство
 
@@ -110,7 +162,7 @@ pnpm test
 pnpm run benchmark:report
 ```
 
-Build проверяет структуру пакета и исходников; report работает с очищенными измерениями и не является разрешением на платные provider calls. Релиз 1.1.0 прошёл **67 тестов**: 64 теста реализации и три регрессионных теста структуры пакета и benchmark. Актуальный результат показывает `pnpm test`. Покрыты настоящий official-SDK stdio/proxy negotiation, ограничения metadata, приватный кэш/reinitialization, scope/cwd, incomplete discovery, cancellation, notification races, committed selection, replay и порядок skill catalog middleware.
+Build проверяет структуру пакета и исходников; report работает с очищенными измерениями и не является разрешением на платные provider calls. Релиз 1.1.0 прошёл **67 тестов**: 64 теста реализации и три регрессионных теста структуры пакета и benchmark. Локальная интеграция 1.2.0 прошла **111 тестов**, включая credential lifecycle и UI/controller regressions. Актуальный результат показывает `pnpm test`. Покрыты настоящий official-SDK stdio/proxy negotiation, ограничения metadata, приватный кэш/reinitialization, scope/cwd, incomplete discovery, cancellation, notification races, committed selection, replay и порядок skill catalog middleware.
 
 Отдельно в живом DSH проверены lazy Native registration, один read-only Native MCP call, прогретый поиск с нулём соединений после перезагрузки bundle, новый Agent без полного skill catalog и загрузка одного exact skill штатным loader. Это не сертифицирует полный OS restart, interactive approval UI, negative guard-denial cases или все модели/провайдеры. Подробнее — [журнал проверок](<docs/VERIFICATION.md>).
 
@@ -136,7 +188,7 @@ node src/proxy.mjs --experimental --config=/absolute/path/to/config.json
 - Штатный skill catalog consumer продолжает работать, но внешний prepend transformer после `next()` удаляет предложенное metadata-сообщение до admission. Более поздний сторонний prepend способен изменить этот порядок.
 - Identity skill loader запоминается для scope chain, а не криптографически связывается с пакетом. Замена в том же scope закрывает discovery; совместимость с произвольным custom loader не заявляется.
 - Bridge покрывает MCP **tools**, но не resource discovery, subscriptions и prompts. Отключение eager-клиента убирает и его resource namespace.
-- Собственного frontend нет. Переводы inventory и оригинальная иконка включены; отрисовка GUI независимо в браузере не проверялась.
+- Добавлена необязательная локализованная страница авторизации MCP. Переводы inventory и оригинальная иконка сохранены. Визуальную проверку в браузере нужно отличать от регистрации slot и unit-тестов.
 
 ## Лицензия
 

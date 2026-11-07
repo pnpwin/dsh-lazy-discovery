@@ -10,3 +10,8 @@
             transport: streamable-http
             url: https://mcp.firecrawl.dev/v2/mcp
             toolCallTimeoutMs: 120000
+    - id: local-lazy-discovery-ui
+      name: '@pnpwin/dsh-lazy-discovery'
+      config:
+        uiOnly: true
+        cacheDirectory: !!js dshHomePath('cache/lazy-discovery')
