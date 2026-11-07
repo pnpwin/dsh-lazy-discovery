@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "measuredOn": "2026-11-07",
+  "measurement": "First assistant/message usage.inputTokens reported by the provider",
+  "provider": "openai-codex",
+  "model": "gpt-6.1-sol",
+  "reasoningEffort": "high",
+  "contextWindow": 500000,
+  "commonNativeTools": 50,
+  "mcpServers": 1,
+  "mcpTools": 3,
+  "modelInvocableSkills": 20,
+  "controls": {
+    "sameUserPrompt": true,
+    "sameCommonToolSchemas": true,
+    "sameCommonSystemText": true,
+    "sameRuntimeContext": true,
+    "toolCalls": 0,
+    "outputTokensPerRequest": 5,
+    "discoveryOverheadIncluded": true,
+    "fullSkillBodiesLoaded": false,
+    "mcpResourcesIncluded": false
+  },
+  "observations": [
+    { "lazyMcp": false, "lazySkills": false, "inputTokens": 14469 },
+    { "lazyMcp": true, "lazySkills": false, "inputTokens": 10350 },
+    { "lazyMcp": false, "lazySkills": true, "inputTokens": 13540 },
+    { "lazyMcp": true, "lazySkills": true, "inputTokens": 9407 }
+  ]
+}

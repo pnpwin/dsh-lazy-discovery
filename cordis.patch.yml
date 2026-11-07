@@ -1,0 +1,12 @@
+- insert:
+    - id: local-lazy-discovery
+      name: '@pnpwin/dsh-lazy-discovery/host'
+      config:
+        cacheDirectory: !!js dshHomePath('cache/lazy-discovery')
+        cacheMaxAgeMs: 1800000
+        skillMaxAgeMs: 60000
+        servers:
+          - serverName: firecrawl
+            transport: streamable-http
+            url: https://mcp.firecrawl.dev/v2/mcp
+            toolCallTimeoutMs: 120000
