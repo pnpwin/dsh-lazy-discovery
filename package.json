@@ -1,6 +1,6 @@
 {
   "name": "@pnpwin/dsh-lazy-discovery",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "private": true,
   "type": "module",
   "description": "Lazy native MCP tools and scope-aware cached skill discovery for DeepSeek Harness.",
@@ -9,7 +9,7 @@
   "repository": { "type": "git", "url": "https://github.com/pnpwin/dsh-lazy-discovery.git" },
   "homepage": "https://github.com/pnpwin/dsh-lazy-discovery#readme",
   "bugs": { "url": "https://github.com/pnpwin/dsh-lazy-discovery/issues" },
-  "engines": { "node": ">=20.3.0", "dsh": "0.2.2-rc.1" },
+  "engines": { "node": ">=20.3.0", "dsh": ">=0.2.2-rc.1 <0.3.0" },
   "packageManager": "pnpm@11.28.5",
   "exports": {
     ".": "./src/host.js",
